@@ -49,7 +49,7 @@ namespace BlogApi.DataLayer
                         {
                             commentResponseList.Add(new CommentResponse()
                             {
-                                Users = user,
+                                Users = user,                                
                                 CommentId = Convert.ToInt32(cmd.Parameters["@ReturnId"].Value.ToString()),
                                 CommentText = commentCreate.CommentText,
                                 CreateTime = commentCreate.CreateTime,
@@ -128,30 +128,35 @@ namespace BlogApi.DataLayer
             return Result;
         }
 
-        public IEnumerable<Comment> GetCommentsByPostId(Comment comment)
+        public IEnumerable<CommentResponse> GetCommentsByPostId(Comment comment)
         {
             using (SqlConnection conn = new SqlConnection(_config))
             {
-                string QueryString = "Select * From Comments Where PostId = @PostId";
+                string QueryString = "Select u.Id, u.FirstName, u.SecondName, c.Id, c.Text, c.CreateTime " +
+                    "from Users as u, Comments as c where c.PostId = @PostId";
                 using (SqlCommand cmd = new SqlCommand(QueryString, conn))
                 {
                     cmd.Parameters.AddWithValue("@PostId", comment.PostId);
 
-
                     if (conn.State == ConnectionState.Closed)
-                        conn.Open();
-
-                    IDataReader reader = cmd.ExecuteReader();
+                        conn.Open();                    
+                    IDataReader reader = cmd.ExecuteReader();                   
                     while (reader.Read())
                     {
-                        var post = new Comment();
+                        var postComment = new CommentResponse();
+                        postComment.Users = new List<UserResponce>();
+                        postComment.Users.Add(new UserResponce()
+                        {
+                            Id = Convert.ToInt32(reader["Id"].ToString()),
+                            FirstName = reader["FirstName"].ToString(),
+                            SecondName = reader["SecondName"].ToString()
+                        });                        
                         comment.Id = Convert.ToInt32(reader["Id"].ToString());
                         comment.CommentText = reader["Title"].ToString();
                         comment.CreateDate = Convert.ToDateTime(reader["CreateTime"].ToString()).ToString("f");
                         comment.PostId = Convert.ToInt32(reader["PostId"].ToString());
-                        comment.UserId = Convert.ToInt32(reader["UserId"].ToString());
 
-                        yield return post;
+                        yield return postComment;
                     }
                 }
 

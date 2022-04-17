@@ -12,7 +12,7 @@ namespace BlogApi.Services
         IEnumerable<GetPostPesponse> GetPostByUserId(int UserId);
         IEnumerable<GetPostPesponse> GetPostByUserIdAndPostId(int UserId, int PostId);
         Task<List<PostResponse>> CreatePost(int UserId, PostCreate postCreate);       
-        Task<int> UpdatePost(int UserId, PostUpdate postUpdate);
+        Task<List<PostResponse>> UpdatePost(int UserId, PostUpdate postUpdate);
         Task<int> DeletePost(int UserId, PostDelete postDelete);
         Task<bool> isTrue(int PostsId, int UserId);
 

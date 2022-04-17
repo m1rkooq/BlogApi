@@ -29,7 +29,7 @@ namespace BlogApi.Contorollers
         }
 
         [AllowAnonymous]
-        [HttpGet("blogs/{UserId}/posts/")]
+        [HttpGet("blogs/{UserId}/posts/")] //все посты юзера
         public IActionResult GetPostsByUserId(int UserId)
         {
             var query = _service.GetPostByUserId(UserId);
@@ -41,7 +41,7 @@ namespace BlogApi.Contorollers
         }
 
         [AllowAnonymous]
-        [HttpGet("blogs/{UserId}/posts/{PostId}")]
+        [HttpGet("blogs/{UserId}/posts/{PostId}")] // пост юзера по постИд
         public IActionResult GetPistsByUserIdAndPostId(int UserId, int PostId)
         {
             var query = _service.GetPostByUserIdAndPostId(UserId, PostId);
@@ -68,6 +68,7 @@ namespace BlogApi.Contorollers
             }
             return BadRequest(new { message = "Not found!" });
         }
+
         [HttpPut]
         public async Task<IActionResult> UpdatePost([FromBody] PostUpdate post)
         {
@@ -77,9 +78,9 @@ namespace BlogApi.Contorollers
             {
                 var command = await _service.UpdatePost(currentUser.Id, post);
 
-                if (command != 0)
+                if (command != null)
                 {
-                    return Ok($"Post was edit PostId: {post.Id}. UserId: {currentUser.Id}");
+                    return Ok(command);
                 }
                 return BadRequest(new { message = "Post don't edite!" });
             }

@@ -12,7 +12,7 @@ namespace BlogApi.Services
         Task<List<CommentResponse>> CommentCreate(int UserId, CommentCreate commentCreate);
         Task<int> CommentDelete(int UserId, CommentDelete commentDelete);
         Task<bool> isTrue(int UserId, CommentDelete commentDelete);
-        IEnumerable<Comment> GetCommentsByPostId(Comment comment);
+        IEnumerable<CommentResponse> GetCommentsByPostId(Comment comment);
 
     }
 }

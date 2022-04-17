@@ -77,9 +77,9 @@ namespace BlogApi.DataLayer
 
         
 
-        public async Task<int> UpdatePost(int UserId, PostUpdate postUpdate)
+        public async Task<List<PostResponse>> UpdatePost(int UserId, PostUpdate postUpdate)
         {
-            int Result = 0;
+            List<PostResponse> postList = new List<PostResponse>();
             using (SqlConnection conn = new SqlConnection(_config))
             {
                 string CommandString = "UPDATE Posts SET " +
@@ -101,7 +101,15 @@ namespace BlogApi.DataLayer
                         if (conn.State == ConnectionState.Closed)
                             await conn.OpenAsync();
                         await cmd.ExecuteNonQueryAsync();
-                        Result = 1;
+                        var user = GetUserInfo(UserId);
+                        postList.Add(new PostResponse
+                        {
+                            User = user,
+                            Id = postUpdate.Id,
+                            Content = postUpdate.Content,                            
+                            UpdateDate = postUpdate.UpdateDate.ToString("f"),
+                            Tags = GetTagList(postUpdate.Id)
+                        });
                     }
                     catch (Exception ex)
                     {
@@ -109,7 +117,7 @@ namespace BlogApi.DataLayer
                     }
                 }
             }
-            return Result;
+            return postList;
         }
 
         public async Task<int> DeletePost(int UserId, PostDelete postDelete)
@@ -142,66 +150,86 @@ namespace BlogApi.DataLayer
 
 
 
-        public IEnumerable<GetPostPesponse> GetPostByUserId(int UserId) //исправить на нормальный запрос
+        public IEnumerable<GetPostPesponse> GetPostByUserId(int UserId)
         {            
             using (SqlConnection conn = new SqlConnection(_config))
             {
-                string QueryString = "Select * From Posts Where UserId = @UserId";
+                string QueryString = "Select u.Id as UserId, u.FirstName, u.SecondName, p.Id as PostId ,p.Title , p.Content ,p.CreateTime, p.UpdateTime, " +
+                    "(Select Count(*) from Comments where Comments.PostId = @PostId) as CommentCount, (Select Count(*) from Likes where PostId = @PostId) as CountLike from Users as u, Posts as p" +
+                    "Where Posts.UserId = @UserId";
                 using (SqlCommand cmd = new SqlCommand(QueryString, conn))
                 {
                     cmd.Parameters.AddWithValue("@UserId", UserId);
 
                     
                     if(conn.State == ConnectionState.Closed)
-                        conn.Open();                      
+                        conn.Open();
                     
-                    IDataReader reader = cmd.ExecuteReader();
-
-
+                    IDataReader reader = cmd.ExecuteReader();                    
                     while (reader.Read())
                     {                        
                         var post = new GetPostPesponse();
-                        post.UserId = UserId;
-                        post.Id = Convert.ToInt32(reader["Id"].ToString());
+
+                        post.user = new List<UserResponce>();
+                        post.user.Add(new UserResponce() {
+                            Id = UserId,
+                            FirstName = reader["FirstName"].ToString(),
+                            SecondName = reader["SecondName"].ToString()
+                        });
+                        post.Id = Convert.ToInt32(reader["PostId"].ToString());
                         post.Title = reader["Title"].ToString();
                         post.Content = reader["Content"].ToString();
                         post.CreatedDate = Convert.ToDateTime(reader["CreateTime"].ToString()).ToString("f");
                         post.UpdateDate = Convert.ToDateTime(reader["UpdateTime"].ToString()).ToString("f");
-                        post.CountLike = GetCountLikeOnPost(post.Id);
+                        post.CountComments = Convert.ToInt32(reader["CommentCount"].ToString());
+                        post.CountLike = Convert.ToInt32(reader["CountLike"].ToString());
+                        post.TagList = GetTagList(post.Id);
 
-                        yield return post; 
+                       /* post.TagList = new List<Tags>();
+                        post.TagList.Add(new Tags()
+                        {
+                            Id = Convert.ToInt32(reader["TagId"].ToString()),
+                            TagName = reader["title"].ToString()
+                        });*/
+                        yield return post;
                     }
-
                 }
-
             }
-            //return null;
         }
 
         public IEnumerable<GetPostPesponse> GetPostByUserIdAndPostId(int UserId, int PostId)
         {
             using (SqlConnection conn = new SqlConnection(_config))
             {
-                string QueryString = "Select * From Posts Where UserId = @UserId And Id = @PostId";
+                string QueryString = "Select u.Id as UserId, u.FirstName, u.SecondName, p.Id as PostId ,p.Title , p.Content ,p.CreateTime, p.UpdateTime, " +
+                    "(Select Count(*) from Comments where Comments.PostId = @PostId) as CommentCount, (Select Count(*) from Likes where PostId = @PostId) as CountLike from Users as u, Posts as p" +
+                    "Where Posts.UserId = @UserId and Posts.Id = @PostId";
                 using (SqlCommand cmd = new SqlCommand(QueryString, conn))
                 {
                     cmd.Parameters.AddWithValue("@UserId", UserId);
                     cmd.Parameters.AddWithValue("@PostId", PostId);
 
                     if (conn.State == ConnectionState.Closed)
-                        conn.Open();
-                    var CountLike = GetCountLikeOnPost(PostId);
+                        conn.Open();                    
                     IDataReader reader = cmd.ExecuteReader();
                     while (reader.Read())
                     {
                         var post = new GetPostPesponse();
-                        post.UserId = UserId;
+                        post.user = new List<UserResponce>();
+                        post.user.Add(new UserResponce()
+                        {
+                            Id = UserId,
+                            FirstName = reader["FirstName"].ToString(),
+                            SecondName = reader["SecondName"].ToString()
+                        });
                         post.Id = Convert.ToInt32(reader["Id"].ToString());
                         post.Title = reader["Title"].ToString();
                         post.Content = reader["Content"].ToString();
                         post.CreatedDate = Convert.ToDateTime(reader["CreateTime"].ToString()).ToString("f");
                         post.UpdateDate = Convert.ToDateTime(reader["UpdateTime"].ToString()).ToString("f");
-                        post.CountLike = CountLike;
+                        post.CountComments = Convert.ToInt32(reader["CommentCount"].ToString());
+                        post.CountLike = Convert.ToInt32(reader["CountLike"].ToString());
+                        post.TagList = GetTagList(PostId);
 
                         yield return post;
                     }
@@ -266,7 +294,7 @@ namespace BlogApi.DataLayer
                             {
                                 Id = TagsId,
                                 TagName = tag,
-                                PostId = PostId
+                                //PostId = PostId
                             });
                         }
                         catch (Exception ex)
@@ -310,12 +338,46 @@ namespace BlogApi.DataLayer
             }
         }
 
-        private List<UserResponce> GetUserInfo(int UserId)
+        private List<Tags> GetTagList(int PostId)
         {
-            List<UserResponce> users = new List<UserResponce>();
+            List<Tags> tags = new List<Tags>();
             using (SqlConnection conn = new SqlConnection(_config))
             {
-                string CommandString = "Select FirstName, SecondName from Users Where Id = @UserId";
+                string CommandString = " Select Tags.Id, Tags.title from PostsTags " +
+                    "join Tags on PostsTags.TagsId = Tags.Id and PostsTags.PostId = @PostId";
+                using (SqlCommand cmd = new SqlCommand(CommandString, conn))
+                {
+                    cmd.Parameters.AddWithValue("@PostId", PostId);
+
+                    try
+                    {
+                        if (conn.State == ConnectionState.Closed)
+                            conn.Open();
+                        IDataReader reader = cmd.ExecuteReader();
+                        while(reader.Read())
+                        {
+                            tags.Add(new Tags()
+                            {
+                                Id = Convert.ToInt32(reader["Id"].ToString()),
+                                TagName = reader["title"].ToString()                               
+                            });
+                        }
+
+                    }
+                    catch (Exception ex)
+                    {
+
+                    }
+                }
+            }
+            return tags;
+        }
+        private List<UserResponce> GetUserInfo(int UserId)
+        {
+            List<UserResponce> tags = new List<UserResponce>();
+            using (SqlConnection conn = new SqlConnection(_config))
+            {
+                string CommandString = " Select Id, FirstName, SecondName from Users where Id = @UserId";
                 using (SqlCommand cmd = new SqlCommand(CommandString, conn))
                 {
                     cmd.Parameters.AddWithValue("@UserId", UserId);
@@ -325,17 +387,16 @@ namespace BlogApi.DataLayer
                         if (conn.State == ConnectionState.Closed)
                             conn.Open();
                         IDataReader reader = cmd.ExecuteReader();
-                        while(reader.Read())
+                        while (reader.Read())
                         {
-                            users.Add(new UserResponce()
+                            tags.Add(new UserResponce()
                             {
-                                Id = UserId,
+                                Id = Convert.ToInt32(reader["Id"].ToString()),
                                 FirstName = reader["FirstName"].ToString(),
-                                SecondName = reader["SecondName"].ToString()
+                                SecondName = reader["SecondName"].ToString(),
                             });
                         }
 
-
                     }
                     catch (Exception ex)
                     {
@@ -343,33 +404,7 @@ namespace BlogApi.DataLayer
                     }
                 }
             }
-            return users;
-        }
-
-        private int GetCountLikeOnPost(int PostId)
-        {
-            int Result = 0;
-            using (SqlConnection conn = new SqlConnection(_config))
-            {
-                string CommandString = "Select Count(*) from Likes where PostId = @PostId";
-                using (SqlCommand cmd = new SqlCommand(CommandString, conn))
-                {
-                    cmd.Parameters.AddWithValue("@PostId", PostId);
-
-                    try
-                    {
-                        if (conn.State == ConnectionState.Closed)
-                            conn.Open();
-                        var Count = cmd.ExecuteScalar();
-                        Result = Convert.ToInt32(Count.ToString());
-                    }
-                    catch (Exception ex)
-                    {
-
-                    }
-                }
-            }
-            return Result;
+            return tags;
         }
 
     }

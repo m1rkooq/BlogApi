@@ -10,6 +10,6 @@ namespace BlogApi.Models.TagsModels
     {
         public int Id { get; set; }
         public string TagName { get; set; }
-        public int PostId { get; set; }
+        //public int PostId { get; set; }
     }
 }

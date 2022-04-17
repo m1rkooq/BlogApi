@@ -14,5 +14,6 @@ namespace BlogApi.Models.CommentsModels
         public DateTime CreateTime { get; set; } = DateTime.Now;
         public int PostId { get; set; }
 
+
     }
 }
