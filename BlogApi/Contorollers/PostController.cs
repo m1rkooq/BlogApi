@@ -3,6 +3,7 @@ using BlogApi.Models.PostsModels;
 
 using BlogApi.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -21,11 +22,12 @@ namespace BlogApi.Contorollers
     public class PostController : ControllerBase
     {
         private readonly IPostService _service;
+        private string _id;
 
-        public PostController(IPostService service)
+        public PostController(IPostService service, IHttpContextAccessor httpContextAccessor)
         {
             _service = service;
-
+            _id = httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value;
         }
 
         [AllowAnonymous]
@@ -56,7 +58,13 @@ namespace BlogApi.Contorollers
         [HttpPost]
         public async Task<IActionResult> CreatePost([FromBody] PostCreate post)
         {
-            var currentUser = GetCurrentUser();
+            var command = await _service.CreatePost(Convert.ToInt32(_id), post);
+            if (command != null)
+            {
+                return Ok(command);
+            }
+            return BadRequest(new { message = "Post don't create!" });
+            /*var currentUser = GetCurrentUser();
             if (currentUser != null)
             {
                 var command = await _service.CreatePost(currentUser.Id, post);
@@ -66,7 +74,7 @@ namespace BlogApi.Contorollers
                 }
                 return BadRequest(new { message = "Post don't create!" });
             }
-            return BadRequest(new { message = "Not found!" });
+            return BadRequest(new { message = "Not found!" });*/
         }
 
         [HttpPut]

@@ -41,7 +41,7 @@ namespace BlogApi
                             .GetBytes(Configuratin["Jwt:Key"]))
                     };
                 });
-
+            
             services.AddHttpContextAccessor();
             services.AddScoped<IAdminServise, AdminService>();
             services.AddScoped<IUserService, UserService>();

@@ -2,6 +2,7 @@
 using BlogApi.Models.Admins;
 using BlogApi.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -18,8 +19,12 @@ namespace BlogApi.Contorollers
     public class AdminController : ControllerBase
     {
         private readonly IAdminServise _service;
-        public AdminController(IAdminServise service) =>
+        public AdminController(IAdminServise service, IHttpContextAccessor httpContextAccessor)
+        {
             _service = service;
+            
+        }
+            
 
         [HttpGet("GetDate")]
         public IActionResult GetPostPerDate([FromBody] AdminsRequestsDate model)
