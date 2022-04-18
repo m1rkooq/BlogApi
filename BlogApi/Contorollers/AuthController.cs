@@ -55,7 +55,7 @@ namespace BlogApi.Contorollers
                 return Ok($"User was registration. USER ID: {users}");
             }
 
-            return BadRequest(new { mewssage = "Didn't register!" });
+            return BadRequest(new { mewssage = "Didn't register! Error or Email is not Unique!" });
         }
 
 

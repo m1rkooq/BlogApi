@@ -9,8 +9,8 @@ namespace BlogApi.Services
 {
     public interface IPostService
     {
-        IEnumerable<GetPostPesponse> GetPostByUserId(int UserId);
-        IEnumerable<GetPostPesponse> GetPostByUserIdAndPostId(int UserId, int PostId);
+        IEnumerable<GetPostResponse> GetPostByUserId(int UserId);
+        IEnumerable<GetPostResponse> GetPostByUserIdAndPostId(int UserId, int PostId);
         Task<List<PostResponse>> CreatePost(int UserId, PostCreate postCreate);       
         Task<List<PostResponse>> UpdatePost(int UserId, PostUpdate postUpdate);
         Task<int> DeletePost(int UserId, PostDelete postDelete);

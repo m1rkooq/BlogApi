@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BlogApi.Models.PostsModels
 {
-    public class GetPostPesponse
+    public class GetPostResponse
     {
         public List<UserResponce> user { get; set; }
         public int Id { get; set; }

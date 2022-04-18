@@ -11,7 +11,7 @@ namespace BlogApi.Models.PostsModels
         public string Title { get; set; }
         public string Content { get; set; }
         public DateTime CreatedDate { get; set; } = DateTime.Now;     
-        public DateTime UpdatedDate { get; set; } = DateTime.Now;        
-        public string Tags { get; set; }
+        public DateTime UpdatedDate { get; set; } = DateTime.Now;
+        public string[] tags { get; set; }
     }
 }

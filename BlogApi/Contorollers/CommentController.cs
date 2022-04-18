@@ -28,15 +28,16 @@ namespace BlogApi.Contorollers
             _service = service;
         }
 
-        [HttpGet("blogs/{UserId}/posts/{PostId}/Comments/{Id}")]
-        public IActionResult GetCommentPyPostId([FromBody] Comment comment)
+        [AllowAnonymous]
+        [HttpGet("blogs/{UserId}/posts/{PostId}/Comments")]
+        public IActionResult GetCommentPyPostId(int PostId)
         {
-            var query = _service.GetCommentsByPostId(comment);
+            var query = _service.GetCommentsByPostId(PostId);
             if(query != null)
             {
                 return Ok(query);
             }
-            return Ok($"No comments PostId: {comment.PostId}");
+            return Ok($"No comments PostId: {PostId}");
         }
 
             

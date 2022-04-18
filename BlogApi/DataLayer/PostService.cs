@@ -52,16 +52,17 @@ namespace BlogApi.DataLayer
 
                         if(PostId != 0)
                         {
-                            var result = await CreateTags(PostId, postCreate.Tags);
+                            var tags = await CreateTags(PostId, postCreate.tags);
                             var user = GetUserInfo(UserId);
                             postList.Add(new PostResponse
                             {
                                 User = user,
                                 Id = PostId,
+                                Title = postCreate.Title,
                                 Content = postCreate.Content,
                                 CreatedDate = postCreate.CreatedDate.ToString(),
                                 UpdateDate = postCreate.UpdatedDate.ToString(),
-                                Tags = result
+                                Tags = tags
                             });
                         }
                         return postList;
@@ -150,16 +151,16 @@ namespace BlogApi.DataLayer
 
 
 
-        public IEnumerable<GetPostPesponse> GetPostByUserId(int UserId)
+        public IEnumerable<GetPostResponse> GetPostByUserId(int UserId)
         {            
             using (SqlConnection conn = new SqlConnection(_config))
             {
-                string QueryString = "Select u.Id as UserId, u.FirstName, u.SecondName, p.Id as PostId ,p.Title , p.Content ,p.CreateTime, p.UpdateTime, " +
-                    "(Select Count(*) from Comments where Comments.PostId = @PostId) as CommentCount, (Select Count(*) from Likes where PostId = @PostId) as CountLike from Users as u, Posts as p" +
-                    "Where Posts.UserId = @UserId";
+                string QueryString = "Select u.Id, u.FirstName, u.SecondName, p.Id as PostId ,p.Title , p.Content ,p.CreateTime, p.UpdateTime, " +
+                    "(Select Count(*) from Comments where Comments.PostId = PostId) as CommentCount, (Select Count(*) from Likes where PostId = PostId) as CountLike from Users as u, Posts as p " +
+                    "Where p.UserId = @UserId";
                 using (SqlCommand cmd = new SqlCommand(QueryString, conn))
                 {
-                    cmd.Parameters.AddWithValue("@UserId", UserId);
+                    cmd.Parameters.AddWithValue("@UserId", UserId);                  
 
                     
                     if(conn.State == ConnectionState.Closed)
@@ -168,9 +169,10 @@ namespace BlogApi.DataLayer
                     IDataReader reader = cmd.ExecuteReader();                    
                     while (reader.Read())
                     {                        
-                        var post = new GetPostPesponse();
+                        var post = new GetPostResponse();
 
                         post.user = new List<UserResponce>();
+
                         post.user.Add(new UserResponce() {
                             Id = UserId,
                             FirstName = reader["FirstName"].ToString(),
@@ -185,25 +187,19 @@ namespace BlogApi.DataLayer
                         post.CountLike = Convert.ToInt32(reader["CountLike"].ToString());
                         post.TagList = GetTagList(post.Id);
 
-                       /* post.TagList = new List<Tags>();
-                        post.TagList.Add(new Tags()
-                        {
-                            Id = Convert.ToInt32(reader["TagId"].ToString()),
-                            TagName = reader["title"].ToString()
-                        });*/
                         yield return post;
                     }
                 }
             }
         }
 
-        public IEnumerable<GetPostPesponse> GetPostByUserIdAndPostId(int UserId, int PostId)
+        public IEnumerable<GetPostResponse> GetPostByUserIdAndPostId(int UserId, int PostId)
         {
             using (SqlConnection conn = new SqlConnection(_config))
             {
-                string QueryString = "Select u.Id as UserId, u.FirstName, u.SecondName, p.Id as PostId ,p.Title , p.Content ,p.CreateTime, p.UpdateTime, " +
-                    "(Select Count(*) from Comments where Comments.PostId = @PostId) as CommentCount, (Select Count(*) from Likes where PostId = @PostId) as CountLike from Users as u, Posts as p" +
-                    "Where Posts.UserId = @UserId and Posts.Id = @PostId";
+                string QueryString = "Select u.Id, u.FirstName, u.SecondName, p.Id as PostId ,p.Title , p.Content ,p.CreateTime, p.UpdateTime, " +
+                    "(Select Count(*) from Comments where Comments.PostId = @PostId) as CommentCount, (Select Count(*) from Likes where PostId = @PostId) as CountLike from Users as u, Posts as p " +
+                    "Where p.UserId = @UserId and p.Id = @PostId";
                 using (SqlCommand cmd = new SqlCommand(QueryString, conn))
                 {
                     cmd.Parameters.AddWithValue("@UserId", UserId);
@@ -214,7 +210,7 @@ namespace BlogApi.DataLayer
                     IDataReader reader = cmd.ExecuteReader();
                     while (reader.Read())
                     {
-                        var post = new GetPostPesponse();
+                        var post = new GetPostResponse();
                         post.user = new List<UserResponce>();
                         post.user.Add(new UserResponce()
                         {
@@ -222,7 +218,7 @@ namespace BlogApi.DataLayer
                             FirstName = reader["FirstName"].ToString(),
                             SecondName = reader["SecondName"].ToString()
                         });
-                        post.Id = Convert.ToInt32(reader["Id"].ToString());
+                        post.Id = Convert.ToInt32(reader["PostId"].ToString());
                         post.Title = reader["Title"].ToString();
                         post.Content = reader["Content"].ToString();
                         post.CreatedDate = Convert.ToDateTime(reader["CreateTime"].ToString()).ToString("f");
@@ -266,12 +262,12 @@ namespace BlogApi.DataLayer
         }
 
 
-        private async Task<List<Tags>> CreateTags(int PostId, string tagsString)
+        private async Task<List<Tags>> CreateTags(int PostId, string[] tags)
         {
-            List<Tags> tags = new List<Tags>();
+            List<Tags> tagList = new List<Tags>();
             using (SqlConnection conn = new SqlConnection(_config))
-            {
-                foreach (string tag in tagsString.Split('#'))
+            {                
+                foreach (string tag in tags)
                 {
                     string CommandString = "INSERT INTO Tags(title) VALUES (@Title) " +
                         "Set @ReturnId = Scope_identity()";
@@ -288,13 +284,12 @@ namespace BlogApi.DataLayer
                                 await conn.OpenAsync();
                             await cmd.ExecuteNonQueryAsync();
 
-                            var TagsId = Int32.Parse(cmd.Parameters["@ReturnId"].Value.ToString());
+                            //var TagsId = 
 
-                            tags.Add(new Tags()
+                            tagList.Add(new Tags()
                             {
-                                Id = TagsId,
-                                TagName = tag,
-                                //PostId = PostId
+                                Id = Int32.Parse(cmd.Parameters["@ReturnId"].Value.ToString()),
+                                TagName = tag
                             });
                         }
                         catch (Exception ex)
@@ -303,10 +298,10 @@ namespace BlogApi.DataLayer
                         }
                     }
                 }
-                await AddInPostTags(PostId, tags);
+                await AddInPostTags(PostId, tagList);
 
             }
-            return tags;
+            return tagList;
         }
 
 
@@ -343,7 +338,7 @@ namespace BlogApi.DataLayer
             List<Tags> tags = new List<Tags>();
             using (SqlConnection conn = new SqlConnection(_config))
             {
-                string CommandString = " Select Tags.Id, Tags.title from PostsTags " +
+                string CommandString = " Select Tags.Id as Id, Tags.title as title from PostsTags " +
                     "join Tags on PostsTags.TagsId = Tags.Id and PostsTags.PostId = @PostId";
                 using (SqlCommand cmd = new SqlCommand(CommandString, conn))
                 {
@@ -360,7 +355,7 @@ namespace BlogApi.DataLayer
                             {
                                 Id = Convert.ToInt32(reader["Id"].ToString()),
                                 TagName = reader["title"].ToString()                               
-                            });
+                            });                            
                         }
 
                     }
@@ -369,8 +364,9 @@ namespace BlogApi.DataLayer
 
                     }
                 }
+                return tags;
             }
-            return tags;
+            
         }
         private List<UserResponce> GetUserInfo(int UserId)
         {

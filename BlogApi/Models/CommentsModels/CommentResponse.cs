@@ -11,7 +11,7 @@ namespace BlogApi.Models.CommentsModels
         public List<UserResponce> Users { get; set; }
         public int CommentId { get; set; }
         public string CommentText { get; set; }
-        public DateTime CreateTime { get; set; } = DateTime.Now;
+        public string CreateTime { get; set; } //= DateTime.Now;
         public int PostId { get; set; }
 
 

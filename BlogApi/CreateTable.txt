@@ -1,0 +1,51 @@
+use BlogApi
+
+Create table Users
+(
+	Id INT primary key IDENTITY,
+	FirstName Nvarchar(30),
+	SecondName Nvarchar(30),
+	Email Nvarchar(50),
+	UserPassword Nvarchar(250),
+	RoleName Nvarchar(50) default('User')
+)
+
+Create table Posts
+( 
+	Id INT Primary key IDENTITY,
+	Title Nvarchar(30) not null,
+	Content ntext not null,
+	CreateTime DateTime not null,
+	UpdateTime DateTime default 0,
+	UserId Int references Users(Id) 
+)
+
+Create table Likes
+(
+	Id INT primary key IDENTITY,
+	PostId Int REFERENCES Posts (Id) not null,
+	UserId INT REFERENCES Users (Id) not null
+	
+)
+
+Create table Comments
+(
+	Id INT Primary key IDENTITY,
+	Text NvarChar(250),
+	CreateTime datetime,
+	PostId Int REFERENCES Posts (Id) not null,
+	UserId Int references Users (Id) not null
+)
+
+
+Create table Tags
+(
+	Id Int primary key IDENTITY,
+	title Nvarchar(250)
+)
+
+Create table PostsTags
+(
+	TagsId Int references Tags (Id) not null,
+	PostId int References Posts (Id) not null
+)

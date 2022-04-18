@@ -24,8 +24,8 @@ namespace BlogApi.DataLayer
             List<CommentResponse> commentResponseList = new List<CommentResponse>();
             using (SqlConnection conn = new SqlConnection(_config))
             {
-                string CommandString = "INSERT INTO Comments CommText, CreateTime, PostId, UserId " +
-                    "VALUES @CommText, @CreateTime, @PostId, UserId" +
+                string CommandString = "INSERT INTO Comments (CommText, CreateTime, PostId, UserId) " +
+                    "VALUES(@CommText, @CreateTime, @PostId, @UserId) " +
                     "Set @ReturnId = SCOPE_IDENTITY()";
                 using (SqlCommand cmd = new SqlCommand(CommandString, conn))
                 {
@@ -35,27 +35,23 @@ namespace BlogApi.DataLayer
                     cmd.Parameters.AddWithValue("@UserId", UserId);
 
                     cmd.Parameters.Add("@ReturnId", SqlDbType.Int, 4);
-                    cmd.Parameters["ReturnId"].Direction = ParameterDirection.Output;
+                    cmd.Parameters["@ReturnId"].Direction = ParameterDirection.Output;
 
                     try
                     {
                         if(conn.State == ConnectionState.Closed)
-                            await conn.OpenAsync();
-                        
-                        IDataReader reader = await cmd.ExecuteReaderAsync();
-                        var user = GetUserInfo(UserId);
-                        
-                        while (reader.Read())
+                            await conn.OpenAsync();                       
+                        await cmd.ExecuteNonQueryAsync();
+
+                        commentResponseList.Add(new CommentResponse()
                         {
-                            commentResponseList.Add(new CommentResponse()
-                            {
-                                Users = user,                                
-                                CommentId = Convert.ToInt32(cmd.Parameters["@ReturnId"].Value.ToString()),
-                                CommentText = commentCreate.CommentText,
-                                CreateTime = commentCreate.CreateTime,
-                                PostId = commentCreate.PostId
-                            });
-                        }
+                            Users = await GetUserInfo(UserId),
+                            CommentId = Convert.ToInt32(cmd.Parameters["@ReturnId"].Value.ToString()),
+                            CommentText = commentCreate.CommentText,
+                            CreateTime = commentCreate.CreateTime.ToString("f"),
+                            PostId = commentCreate.PostId
+                        });
+                        return commentResponseList;
                     }
                     catch(Exception ex)
                     {
@@ -65,7 +61,7 @@ namespace BlogApi.DataLayer
 
                 }
             }
-            return commentResponseList;
+            return null;
         }
 
         public async Task<int> CommentDelete(int UserId, CommentDelete commentDelete)
@@ -128,15 +124,15 @@ namespace BlogApi.DataLayer
             return Result;
         }
 
-        public IEnumerable<CommentResponse> GetCommentsByPostId(Comment comment)
+        public IEnumerable<CommentResponse> GetCommentsByPostId(int PostId)
         {
             using (SqlConnection conn = new SqlConnection(_config))
             {
-                string QueryString = "Select u.Id, u.FirstName, u.SecondName, c.Id, c.Text, c.CreateTime " +
+                string QueryString = "Select u.Id as UserId, u.FirstName, u.SecondName, c.Id as ComId, c.CommText, c.CreateTime " +
                     "from Users as u, Comments as c where c.PostId = @PostId";
                 using (SqlCommand cmd = new SqlCommand(QueryString, conn))
                 {
-                    cmd.Parameters.AddWithValue("@PostId", comment.PostId);
+                    cmd.Parameters.AddWithValue("@PostId", PostId);
 
                     if (conn.State == ConnectionState.Closed)
                         conn.Open();                    
@@ -147,14 +143,14 @@ namespace BlogApi.DataLayer
                         postComment.Users = new List<UserResponce>();
                         postComment.Users.Add(new UserResponce()
                         {
-                            Id = Convert.ToInt32(reader["Id"].ToString()),
+                            Id = Convert.ToInt32(reader["UserId"].ToString()),
                             FirstName = reader["FirstName"].ToString(),
                             SecondName = reader["SecondName"].ToString()
-                        });                        
-                        comment.Id = Convert.ToInt32(reader["Id"].ToString());
-                        comment.CommentText = reader["Title"].ToString();
-                        comment.CreateDate = Convert.ToDateTime(reader["CreateTime"].ToString()).ToString("f");
-                        comment.PostId = Convert.ToInt32(reader["PostId"].ToString());
+                        });
+                        postComment.CommentId = Convert.ToInt32(reader["ComId"].ToString());
+                        postComment.CommentText = reader["CommText"].ToString();
+                        postComment.CreateTime = Convert.ToDateTime(reader["CreateTime"].ToString()).ToString("f");
+                        postComment.PostId = PostId;
 
                         yield return postComment;
                     }
@@ -164,7 +160,7 @@ namespace BlogApi.DataLayer
         }
 
 
-        private List<UserResponce> GetUserInfo(int UserId)
+        private async Task<List<UserResponce>> GetUserInfo(int UserId)
         {
             List<UserResponce> users = new List<UserResponce>();
             using (SqlConnection conn = new SqlConnection(_config))
@@ -177,8 +173,8 @@ namespace BlogApi.DataLayer
                     try
                     {
                         if (conn.State == ConnectionState.Closed)
-                            conn.Open();
-                        IDataReader reader = cmd.ExecuteReader();
+                            await conn.OpenAsync();
+                        IDataReader reader = await cmd.ExecuteReaderAsync();
                         while (reader.Read())
                         {
                             users.Add(new UserResponce()

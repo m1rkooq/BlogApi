@@ -43,10 +43,9 @@ namespace BlogApi
                 });
 
             services.AddHttpContextAccessor();
-
-            services.AddScoped<IBlogServise, BlogService>();
+            services.AddScoped<IAdminServise, AdminService>();
             services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IPostService, PostService>();
+            services.AddTransient<IPostService, PostService>();
             services.AddScoped<ICommentService, CommentService>();
             services.AddScoped<ILikeService, LikeService>();
             services.AddControllers();
